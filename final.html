@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            button{user-select: none; cursor: pointer;}
+            canvas{border: solid 1px black;}
+        </style>
+    </head>
+
+    <!-- 顶点着色器 -->
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 aPosition;
+        attribute vec4 aNormal;
+        attribute vec2 aTexCoord;
+
+        uniform mat4 uModelMatrix;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        uniform vec4 uLightPosition;
+
+        varying vec3 vN, vL, vE;
+        varying vec2 vTexCoord;
+
+        void main(){
+            mat4 transformMatrix = uModelViewMatrix * uModelMatrix;
+            vec4 pos = transformMatrix * aPosition;
+
+            // 光照
+            if(uLightPosition.z == 0.0){
+                vL = normalize(uLightPosition.xyz);
+            }  
+            else{
+                vL = normalize(uLightPosition).xyz - pos.xyz;
+            }
+            vE = -normalize(pos.xyz);
+            vN = normalize((transformMatrix * aNormal).xyz);
+            vTexCoord = aTexCoord;
+            gl_Position = uProjectionMatrix * pos;
+            
+        }
+    </script>
+    <!-- 片元着色器 -->
+    <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+
+        uniform vec4 uAmbientProduct, uDiffuseProduct, uSpecularProduct;
+        uniform float uShininess;
+        uniform sampler2D texture;
+
+        varying vec3 vN, vL, vE;
+        varying vec2 vTexCoord;
+
+        void main(){        
+            vec3 H = normalize( vL + vE );
+            vec4 ambient = uAmbientProduct;
+        
+            float Kd = max( dot(vL, vN), 0.0 );
+            vec4 diffuse = Kd * uDiffuseProduct;
+        
+            float Ks = pow( max(dot(vN, H), 0.0), uShininess );
+            vec4 specular = Ks * uSpecularProduct;
+            
+            if(dot(vL, vN) < 0.0 ) specular = vec4(0.0, 0.0, 0.0, 1.0);
+        
+            vec4 fColor = ambient + diffuse +specular;
+            fColor.a = 1.0;
+            if(vTexCoord.x==0.0 && vTexCoord.y==0.0 ){
+                gl_FragColor =  fColor;
+            }else{
+                gl_FragColor =  fColor*texture2D( texture, vTexCoord );
+            }
+            
+        }
+            
+    </script>
+
+
+    <!-- <script id="vertex-shader" type="x-shader/x-vertex">
+        
+        // assume both position and normal are in homogeneous form
+        
+        attribute vec4 aPosition;
+        attribute vec4 aNormal;
+        
+        varying vec4 fColor;
+        
+        
+        uniform vec4 uAmbientProduct, uDiffuseProduct, uSpecularProduct;
+        uniform mat4 uModelMatrix;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        uniform vec4 uLightPosition;
+        uniform float uShininess;
+        uniform mat3 normalMatrix;
+        
+        
+        void
+        main()
+        {
+        
+            // pos is vertex position in eye coordinates
+            mat4 transformMatrix = uModelViewMatrix * uModelMatrix;
+            vec3 pos = (transformMatrix * aPosition).xyz;
+        
+            // vector from vertex position to light source
+        
+            vec3 L;
+        
+            // check for directional light
+        
+            if(uLightPosition.w == 0.0) L = normalize((uModelViewMatrix*uLightPosition).xyz);
+            else L = normalize( (uModelViewMatrix*uLightPosition).xyz - pos );
+        
+            // Because the eye point the is at the orgin
+            // the vector from the vertex position to the eye is
+        
+            vec3 E = -normalize( pos );
+        
+            // halfway vector
+            vec3 H = normalize( L + E );
+        
+            vec3 N = normalize((transformMatrix*aNormal).xyz);
+        
+            // Compute terms in the illumination equation
+            vec4 ambient = uAmbientProduct;
+        
+            float Kd = max( dot(L, N),0.0 );
+            vec4  diffuse = Kd*uDiffuseProduct;
+        
+            float Ks = pow( max(dot(N, H),0.0), uShininess );
+            vec4  specular = Ks * uSpecularProduct;
+        
+            if( dot(L, N) < 0.0 ) {
+               specular = vec4(0.0, 0.0, 0.0, 1.0);
+            } 
+        
+            gl_Position = uProjectionMatrix * transformMatrix * aPosition;
+        
+            fColor = ambient + diffuse +specular;
+        
+            fColor.a = 1.0;
+        }
+        </script>
+        
+        <script id="fragment-shader" type="x-shader/x-fragment">
+        
+        precision mediump float;
+        
+        varying vec4 fColor;
+        
+        void
+        main()
+        {
+        
+            gl_FragColor = fColor;
+        
+        }
+        </script> -->
+
+    <body>
+        <h1>Final Project</h1>
+        <canvas id="gl-canvas" width="600" height="600">您的浏览器不支持HTML5 canvas</canvas>
+        <script type="text/javascript" src="../Common/webgl-utils.js"></script>
+        <script type="text/javascript" src="../Common/initShaders.js"></script>
+        <script type="text/javascript" src="../Common/MV.js"></script>
+        <script type="text/javascript" src="final.js"></script>
+    </body>
+</html>
