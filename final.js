@@ -64,7 +64,7 @@ var traceball = {
     startPos: [0, 0, 0],
     rotationMatrix: mat4(),
     angularSpeed: 0.0,
-    angularAcceleration: 0.1,
+    angularAcceleration: 0.003,
     axis:[0, 0, 0]
 }
 
@@ -87,8 +87,8 @@ var material = {
 function triangle(a, b, c, origin) {
     // 计算法向量
     var t1 = subtract(b, a);
-    var t2 = subtract(c, b);
-    var normal = vec4(cross(t2, t1),0);
+    var t2 = subtract(b, c);
+    var normal = vec4(cross(t1, t2),0);
     sphere.normalsArray.push(normal);
     sphere.normalsArray.push(normal);
     sphere.normalsArray.push(normal);
@@ -181,9 +181,14 @@ function mouseMotion(x,  y)
     if(traceball.mousedown) {
         var curPos = calc_trackball_3d_pos(x, y);
         var axis = cross(traceball.lastPos, curPos);
-        var angle = Math.asin(length(axis));  //单位球, 分母为1
-        traceball.rotationMatrix = rotate(angle*180/Math.PI, normalize(axis));
-        traceball.lastPos = curPos;
+        var l_axis = length(axis);
+        if(l_axis!=0){
+            var angle = Math.asin(l_axis);  //单位球, 分母为1
+            transform.modelMatrix = mult(rotate(angle*180/Math.PI, axis) ,transform.modelMatrix);
+            traceball.lastPos = curPos;
+            traceball.angularSpeed = angle*2;
+            traceball.axis = axis;
+        }
     }
 }
 
@@ -321,7 +326,7 @@ window.onload = function init() {
     gl.uniform4fv( gl.getUniformLocation(program, "uDiffuseProduct"), flatten(diffuseProduct) );
     gl.uniform4fv( gl.getUniformLocation(program, "uSpecularProduct"), flatten(specularProduct) );
     gl.uniform1f( gl.getUniformLocation(program, "uShininess"), material.shininess );
-    moveLight(4, 1, 0);
+    moveLight(8, 0, 0);
 
 
     var image = new Image();
@@ -339,15 +344,12 @@ function render() {
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // 跟踪球惯性移动
-    // if(!traceball.mousedown && traceball.angularSpeed >= traceball.angularAcceleration) {
-    //     transform.modelMatrix = mult(rotate(traceball.angularSpeed, traceball.axis), transform.modelMatrix );
-    //     // 线性减速
-    //     traceball.angularSpeed -= traceball.angularAcceleration;
-    // }
-
-    if(traceball.mousedown){
-        transform.modelMatrix = mult(traceball.rotationMatrix,transform.modelMatrix);
+    if(!traceball.mousedown && traceball.angularSpeed >= traceball.angularAcceleration) {
+        transform.modelMatrix = mult(rotate(traceball.angularSpeed, traceball.axis), transform.modelMatrix );
+        // 线性减速
+        traceball.angularSpeed -= traceball.angularAcceleration;
     }
+
 
     // 模型变换
     gl.uniformMatrix4fv(uniformLoc.modelMatrix, false, flatten(transform.modelMatrix) );

@@ -31,7 +31,7 @@
                 vL = normalize(uLightPosition.xyz);
             }  
             else{
-                vL = normalize(uLightPosition).xyz - pos.xyz;
+                vL = normalize((uModelViewMatrix*uLightPosition).xyz - pos.xyz);
             }
             vE = -normalize(pos.xyz);
             vN = normalize((transformMatrix * aNormal).xyz);
