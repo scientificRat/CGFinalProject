@@ -6,65 +6,18 @@ var program;
 
 // uniform 变量
 var uniformLoc = {
-    // 着色器初始化后指定
+    objectTransformMatrix: null, 
     modelMatrix: null,
     modelViewMatrix: null,
     projectionMatrix: null,
+    ambientProduct:null,
+    diffuseProduct:null,
+    specularProduct:null,
+    shininess: null
 };
 
-// models
-var sphere = {
-    texCoordsArray:[],
-    pointsArray:[], //顶点数组 
-    normalsArray:[], //法向量数组
-    numTimesToSubdivide: 4,     
-    // 初始四面体坐标
-    va: vec4(0.0, 0.0, -1.0,1),
-    vb: vec4(0.0, 0.942809, 0.333333, 1),
-    vc: vec4(-0.816497, -0.471405, 0.333333, 1),
-    vd: vec4(0.816497, -0.471405, 0.333333,1),
-    origin:[-2, 0, 0]
-}
-
-var objects=[
-    {
-        transform: translate(-2,0,0),
-        pointsArray:[],
-        normalsArray:[],
-        texCoordsArray: null,
-        material:{
-            ambient: vec4( 0.5, 0.0, 0.0, 1.0 ),
-            diffuse: vec4( 0.5, 0.0, 0.0, 1.0 ),
-            specular: vec4( 0.5, 0.5, 0.5, 1.0 ),
-            shininess: 20.0
-        }
-    },
-    {
-        transform: translate(2,0,0),
-        pointsArray:[],
-        normalsArray:[],
-        texCoordsArray: null,
-        material:{
-            ambient: vec4( 0.5, 0.0, 0.0, 1.0 ),
-            diffuse: vec4( 0.5, 0.0, 0.0, 1.0 ),
-            specular: vec4( 0.5, 0.5, 0.5, 1.0 ),
-            shininess: 20.0
-        }
-    }
-];
-
-
-var sphere2 = {
-    pointsArray:[], //顶点数组 
-    normalsArray:[], //法向量数组
-    numTimesToSubdivide: 4,     
-    // 初始四面体坐标
-    va: vec4(0.0, 0.0, -1.0,1),
-    vb: vec4(0.0, 0.942809, 0.333333, 1),
-    vc: vec4(-0.816497, -0.471405, 0.333333, 1),
-    vd: vec4(0.816497, -0.471405, 0.333333,1),
-    origin:[2, 0, 0]
-}
+// objects
+var all_objects=[];
 
 // camera
 var camera = {
@@ -73,7 +26,7 @@ var camera = {
     up:[0, 1, 0]
 };
 
-// transform
+// scene transform
 var transform = {
     modelMatrix: mat4(
         1,0,0,0,
@@ -84,6 +37,14 @@ var transform = {
     modelViewMatrix: lookAt(camera.pos, camera.look, camera.up),
     // projectionMatrix: ortho(-3, 3, -3, 3, 0, 12),
     projectionMatrix: perspective(60,1, 4, 11)
+}
+
+// light
+var light = {
+    pos: vec4(0.0, 0.0, 0.0, 1.0),       //齐次坐标 最后一个分量为1表示点光源
+    ambient: vec4(0.9, 0.9, 0.9, 1.0 ),  //环境光分量
+    diffuse: vec4( 1.0, 1.0, 1.0, 1.0 ), //漫反射光分量
+    specular: vec4( 1.0, 1.0, 1.0, 1.0 ) //镜面反射光分量
 }
 
 // traceball
@@ -97,81 +58,95 @@ var traceball = {
     axis:[0, 0, 0]
 }
 
-// light
-var light = {
-    pos: vec4(0.0, 0.0, 0.0, 1.0),       //齐次坐标 最后一个分量为1表示点光源
-    ambient: vec4(0.9, 0.9, 0.9, 1.0 ),  //环境光分量
-    diffuse: vec4( 1.0, 1.0, 1.0, 1.0 ), //漫反射光分量
-    specular: vec4( 1.0, 1.0, 1.0, 1.0 ) //镜面反射光分量
+function Rotation(axis, angularSpeed){
+    this.axis = axis;
+    this.angularSpeed =  angularSpeed;
 }
 
-// light-material
-var material = {
-    ambient: vec4( 0.5, 0.0, 0.0, 1.0 ),
-    diffuse: vec4( 0.5, 0.0, 0.0, 1.0 ),
-    specular: vec4( 0.5, 0.5, 0.5, 1.0 ),
-    shininess: 20.0
+// data-struct RenderObject
+function RenderObject(transform, pointsArray, normalsArray,texCoordsArray, material, selfRotating=null){
+    this.transform = transform;
+    this.pointsArray = pointsArray;
+    this.normalsArray = normalsArray;
+    this.texCoordsArray = texCoordsArray;
+    this.material = material;
+    this.selfRotating = selfRotating;
 }
 
-function triangle(a, b, c, origin) {
-    // 计算法向量
-    var t1 = subtract(b, a);
-    var t2 = subtract(b, c);
-    var normal = vec4(cross(t1, t2),0);
-    sphere.normalsArray.push(normal);
-    sphere.normalsArray.push(normal);
-    sphere.normalsArray.push(normal);
-    // sphere.normalsArray.push(b[0], b[1], b[2], 0.0);
-    // sphere.normalsArray.push(c[0], c[1], c[2], 0.0);
-    sphere.pointsArray.push([a[0]+origin[0],a[1]+origin[1], a[2]+origin[2], 1]);
-    sphere.pointsArray.push([b[0]+origin[0],b[1]+origin[1], b[2]+origin[2], 1]);
-    sphere.pointsArray.push([c[0]+origin[0],c[1]+origin[1], c[2]+origin[2], 1]);
-    // sphere.texCoordsArray.push([a[0]/4+1/4,a[1]/4+1/4]);
-    // sphere.texCoordsArray.push([b[0]/4+1/4,b[1]/4+1/4]);
-    // sphere.texCoordsArray.push([c[0]/4+1/4,c[1]/4+1/4]);
-    sphere.texCoordsArray.push([0,0]);
-    sphere.texCoordsArray.push([0,0]);
-    sphere.texCoordsArray.push([0,0]);
+// data-struct Material
+function Material(
+    ambient=vec4( 0.5, 0.0, 0.0, 1.0 ),
+    diffuse=vec4( 0.5, 0.0, 0.0, 1.0 ),
+    specular=vec4( 0.5, 0.5, 0.5, 1.0 ),
+    shininess=20.0) {
+
+    this.ambient = ambient;
+    this.diffuse = diffuse;
+    this.specular = specular;
+    this.shininess = shininess;
+}
+
+// 创建球体
+function createSphere(origin = [0,0,0], material = new Material(), numTimesToSubdivide =4, texture = null){
+    // 初始四面体坐标
+    var va = vec4(0.0, 0.0, -1.0,1);
+    var vb = vec4(0.0, 0.942809, 0.333333, 1);
+    var vc = vec4(-0.816497, -0.471405, 0.333333, 1);
+    var vd = vec4(0.816497, -0.471405, 0.333333,1);
+    var sphere = new RenderObject(translate(origin),[],[],[],material);
+
+    // inner functions
+    function triangle(a, b, c) {
+        // 计算法向量
+        var t1 = subtract(b, a);
+        var t2 = subtract(b, c);
+        var normal = vec4(cross(t1, t2),0);
+        sphere.normalsArray.push(normal);
+        sphere.normalsArray.push(normal);
+        sphere.normalsArray.push(normal);
+        sphere.pointsArray.push([a[0],a[1],a[2], 1]);
+        sphere.pointsArray.push([b[0],b[1],b[2], 1]);
+        sphere.pointsArray.push([c[0],c[1],c[2], 1]);
+        if(texture==null){
+            sphere.texCoordsArray.push([0,0]);
+            sphere.texCoordsArray.push([0,0]);
+            sphere.texCoordsArray.push([0,0]);
+        }
+    }
     
-}
-
-
-function divideTriangle(a, b, c, count,origin) {
-    if ( count > 0 ) {
-        var ab = mix( a, b, 0.5);
-        var ac = mix( a, c, 0.5);
-        var bc = mix( b, c, 0.5);
-
-        ab = normalize(ab, true);
-        ac = normalize(ac, true);
-        bc = normalize(bc, true);
-
-        divideTriangle( a, ab, ac, count - 1, origin );
-        divideTriangle( ab, b, bc, count - 1, origin );
-        divideTriangle( bc, c, ac, count - 1, origin );
-        divideTriangle( ab, bc, ac, count - 1, origin );
+    function divideTriangle(a, b, c, count) {
+        if ( count > 0 ) {
+            var ab = mix( a, b, 0.5);
+            var ac = mix( a, c, 0.5);
+            var bc = mix( b, c, 0.5);
+    
+            ab = normalize(ab, true);
+            ac = normalize(ac, true);
+            bc = normalize(bc, true);
+    
+            divideTriangle( a, ab, ac, count - 1 );
+            divideTriangle( ab, b, bc, count - 1 );
+            divideTriangle( bc, c, ac, count - 1 );
+            divideTriangle( ab, bc, ac, count - 1 );
+        }
+        else {
+            triangle( a, b, c);
+        }
     }
-    else {
-        triangle( a, b, c, origin );
+    
+    function tetrahedron(a, b, c, d, n) {
+        divideTriangle(a, b, c, n);
+        divideTriangle(d, c, b, n);
+        divideTriangle(a, d, b, n);
+        divideTriangle(a, c, d, n);
     }
+    tetrahedron(va,vb,vc,vd, numTimesToSubdivide);
+    return sphere;
 }
-
-
-function tetrahedron(a, b, c, d, n, origin) {
-    divideTriangle(a, b, c, n, origin);
-    divideTriangle(d, c, b, n, origin);
-    divideTriangle(a, d, b, n, origin);
-    divideTriangle(a, c, d, n, origin);
-}
-
-function generateVertices(sphere){
-    tetrahedron(sphere.va, sphere.vb, sphere.vc, sphere.vd, sphere.numTimesToSubdivide, sphere.origin);
-}
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //根据点击的二维坐标计算单位球上的3d坐标
-function calc_trackball_3d_pos( x,  y ) {
+function calc_trackball_3d_pos(x, y) {
     var d, a;
     var v = [];
 
@@ -200,10 +175,6 @@ function mouseDown(x, y)
     traceball.startMatrix = transform.modelMatrix;
 }
 
-// setInterval(function(){
-//     console.log(flatten(transform.modelMatrix));
-// },500);
-
 // 鼠标移动
 function mouseMotion(x,  y)
 {
@@ -228,8 +199,7 @@ function mouseUp(x, y)
     traceball.mousedown = false;
 }
 
-
-function moveLight(radius, theta, phi){
+function setLightPos(radius, theta, phi){
     // 控制光源位置
     light.pos = vec4(radius*Math.cos(phi)*Math.sin(theta),
     radius*Math.sin(phi), radius*Math.cos(phi)*Math.cos(theta), 1);
@@ -238,14 +208,12 @@ function moveLight(radius, theta, phi){
 
 function applyTransform(){
     gl.uniformMatrix4fv(uniformLoc.modelMatrix, false, flatten(transform.modelMatrix) );
-    gl.uniformMatrix4fv(uniformLoc.modelViewMatrix, false, flatten(transform.modelViewMatrix) );
-    gl.uniformMatrix4fv(uniformLoc.projectionMatrix, false, flatten(transform.projectionMatrix) );
-    gl.uniform3fv(uniformLoc.cameraPos, flatten(camera.pos));
+    gl.uniformMatrix4fv(uniformLoc.modelViewMatrix, false, flatten(transform.modelViewMatrix));
+    gl.uniformMatrix4fv(uniformLoc.projectionMatrix, false, flatten(transform.projectionMatrix));
 }
 
 
 var texture; //纹理对象
-
 /*******************创建纹理对象，并设置参数，关联片元着色器中的采样器*********************/
 function configureTexture( image ) {
 	//创建纹理对象texture并作为当前纹理对象，并装载了数字图像image
@@ -268,6 +236,33 @@ function configureTexture( image ) {
 }
 
 
+function setObjectAtrributes(object){
+    // 顶点 atrributes
+    var vBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, flatten(object.pointsArray), gl.STATIC_DRAW);
+    var aPosition = gl.getAttribLocation( program, "aPosition");
+    gl.vertexAttribPointer(aPosition, 4, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(aPosition);
+
+    // 法向量 atrributes
+    var nBuffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, nBuffer);
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(object.normalsArray), gl.STATIC_DRAW );
+    var aNormal = gl.getAttribLocation( program, "aNormal" );
+    gl.vertexAttribPointer( aNormal, 4, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( aNormal);
+
+    // texture
+    var tBuffer = gl.createBuffer();
+    gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer );
+    gl.bufferData( gl.ARRAY_BUFFER, flatten(object.texCoordsArray), gl.STATIC_DRAW );
+    var aTexCoord = gl.getAttribLocation( program, "aTexCoord" );
+    gl.vertexAttribPointer( aTexCoord, 2, gl.FLOAT, false, 0, 0 );
+    gl.enableVertexAttribArray( aTexCoord );
+    
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 window.onload = function init() {
     canvas = document.getElementById( "gl-canvas" );
@@ -278,38 +273,33 @@ window.onload = function init() {
     // 背景颜色
     gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
     gl.enable(gl.DEPTH_TEST);
-    // 加载着色器，并初始化attribute
+    // 加载着色器
     program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
+    // 初始化uniform
+    uniformLoc.objectTransformMatrix = gl.getUniformLocation( program, "uObjectTransformMatrix")
+    uniformLoc.modelMatrix = gl.getUniformLocation( program, "uModelMatrix")
+    uniformLoc.modelViewMatrix = gl.getUniformLocation( program, "uModelViewMatrix" );
+    uniformLoc.projectionMatrix = gl.getUniformLocation( program, "uProjectionMatrix" );
+    uniformLoc.ambientProduct = gl.getUniformLocation(program, "uAmbientProduct");
+    uniformLoc.diffuseProduct = gl.getUniformLocation(program, "uDiffuseProduct");
+    uniformLoc.specularProduct =  gl.getUniformLocation(program, "uSpecularProduct");
+    uniformLoc.shininess = gl.getUniformLocation(program, "uShininess");
 
-    // 生成顶点数据
-    generateVertices(sphere);
-    generateVertices(sphere2);
+    // 固定的uniform变量
+    gl.uniformMatrix4fv(uniformLoc.modelViewMatrix, false, flatten(transform.modelViewMatrix));
+    gl.uniformMatrix4fv(uniformLoc.projectionMatrix, false, flatten(transform.projectionMatrix));
 
-    // 顶点 atrributes
-    var vBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, flatten(sphere.pointsArray), gl.STATIC_DRAW);
-    var aPosition = gl.getAttribLocation( program, "aPosition");
-    gl.vertexAttribPointer(aPosition, 4, gl.FLOAT, false, 0, 0);
-    gl.enableVertexAttribArray(aPosition);
+    // 设置光源位置
+    setLightPos(8, 0, 0);
 
-    // 法向量 atrributes
-    var nBuffer = gl.createBuffer();
-    gl.bindBuffer( gl.ARRAY_BUFFER, nBuffer);
-    gl.bufferData( gl.ARRAY_BUFFER, flatten(sphere.normalsArray), gl.STATIC_DRAW );
-    var aNormal = gl.getAttribLocation( program, "aNormal" );
-    gl.vertexAttribPointer( aNormal, 4, gl.FLOAT, false, 0, 0 );
-    gl.enableVertexAttribArray( aNormal);
-
-    var tBuffer = gl.createBuffer();
-    gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer );
-    gl.bufferData( gl.ARRAY_BUFFER, flatten(sphere.texCoordsArray), gl.STATIC_DRAW );
-    var aTexCoord = gl.getAttribLocation( program, "aTexCoord" );
-    gl.vertexAttribPointer( aTexCoord, 2, gl.FLOAT, false, 0, 0 );
-    gl.enableVertexAttribArray( aTexCoord );
-
-    
+    // 创建模型数据
+    var sphere1 = createSphere([-2, 0, 0]);
+    var sphere2 = createSphere([2, 0, 0]);
+    // 自转效果
+    sphere1.selfRotating = new Rotation([1,0,0],1);
+    all_objects.push(sphere1);
+    all_objects.push(sphere2);
 
     // 鼠标跟踪球
     // canvas 边界
@@ -337,27 +327,8 @@ window.onload = function init() {
         var y = 2*(canvas.height-(event.clientY-bbox.top))/canvas.height-1;
         mouseUp(x,y);
     });
-
-    // 变换---------------------
-    // 处理全局变量
-    uniformLoc.modelMatrix = gl.getUniformLocation( program, "uModelMatrix")
-    uniformLoc.modelViewMatrix = gl.getUniformLocation( program, "uModelViewMatrix" );
-    uniformLoc.projectionMatrix = gl.getUniformLocation( program, "uProjectionMatrix" );
-    applyTransform();
-
-
-    // 光照---------------------
-    var ambientProduct = mult(light.ambient, material.ambient);
-    var diffuseProduct = mult(light.diffuse, material.diffuse);
-    var specularProduct = mult(light.specular, material.specular);
-    // 传递uniform变量
-    gl.uniform4fv( gl.getUniformLocation(program, "uAmbientProduct"), flatten(ambientProduct) );
-    gl.uniform4fv( gl.getUniformLocation(program, "uDiffuseProduct"), flatten(diffuseProduct) );
-    gl.uniform4fv( gl.getUniformLocation(program, "uSpecularProduct"), flatten(specularProduct) );
-    gl.uniform1f( gl.getUniformLocation(program, "uShininess"), material.shininess );
-    moveLight(8, 0, 0);
-
-
+   
+    // 加载纹理
     var image = new Image();
     image.src = "texture.jpg"
 	image.onload = function() {
@@ -371,20 +342,41 @@ window.onload = function init() {
 
 function render() { 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
     // 跟踪球惯性移动
     if(!traceball.mousedown && traceball.angularSpeed >= traceball.angularAcceleration) {
         transform.modelMatrix = mult(rotate(traceball.angularSpeed, traceball.axis), transform.modelMatrix );
         // 线性减速
         traceball.angularSpeed -= traceball.angularAcceleration;
     }
-
-
-    // 模型变换
+    // 场景模型变换
     gl.uniformMatrix4fv(uniformLoc.modelMatrix, false, flatten(transform.modelMatrix) );
-    // 绘制
-    var size = sphere.pointsArray.length/2;
-    gl.drawArrays( gl.TRIANGLES, 0, size);
-    gl.drawArrays( gl.TRIANGLES, size, size);
+
+    // 绘制所有对象
+    for (const object of all_objects) {
+
+        // 传递顶点、法向量、纹理等attributes
+        setObjectAtrributes(object);
+
+        // 对象本身的变换（区别于整体场景）
+        // 自转
+        var rotation = object.selfRotating;
+        if(object.selfRotating!=null){
+            object.transform = mult(rotate(rotation.angularSpeed, rotation.axis), object.transform);
+        }
+        gl.uniformMatrix4fv( uniformLoc.objectTransformMatrix,false, flatten(object.transform));
+
+        // 光照
+        var ambientProduct = mult(light.ambient, object.material.ambient);
+        var diffuseProduct = mult(light.diffuse, object.material.diffuse);
+        var specularProduct = mult(light.specular, object.material.specular);
+        // 传递光照相关uniform变量
+        gl.uniform4fv( uniformLoc.ambientProduct, flatten(ambientProduct));
+        gl.uniform4fv( uniformLoc.diffuseProduct, flatten(diffuseProduct) );
+        gl.uniform4fv( uniformLoc.specularProduct, flatten(specularProduct) );
+        gl.uniform1f( uniformLoc.shininess, object.material.shininess );
+
+        // 绘制
+        gl.drawArrays( gl.TRIANGLES, 0, object.pointsArray.length);
+    }
     window.requestAnimFrame(render);
 }

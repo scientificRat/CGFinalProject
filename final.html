@@ -14,6 +14,7 @@
         attribute vec4 aNormal;
         attribute vec2 aTexCoord;
 
+        uniform mat4 uObjectTransformMatrix;
         uniform mat4 uModelMatrix;
         uniform mat4 uModelViewMatrix;
         uniform mat4 uProjectionMatrix;
@@ -23,7 +24,7 @@
         varying vec2 vTexCoord;
 
         void main(){
-            mat4 transformMatrix = uModelViewMatrix * uModelMatrix;
+            mat4 transformMatrix = uModelViewMatrix * uModelMatrix * uObjectTransformMatrix;
             vec4 pos = transformMatrix * aPosition;
 
             // 光照
