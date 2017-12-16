@@ -16,7 +16,7 @@ var uniformLoc = {
     shininess: null
 };
 
-// objects
+// 所有要绘制的objects
 var all_objects=[];
 
 // camera
@@ -36,10 +36,10 @@ var transform = {
     ),
     modelViewMatrix: lookAt(camera.pos, camera.look, camera.up),
     // projectionMatrix: ortho(-3, 3, -3, 3, 0, 12),
-    projectionMatrix: perspective(60,1, 4, 11)
+    projectionMatrix: perspective(55,1, 4, 11)
 }
 
-// light
+// 全局光源
 var light = {
     pos: vec4(0.0, 0.0, 0.0, 1.0),       //齐次坐标 最后一个分量为1表示点光源
     ambient: vec4(0.9, 0.9, 0.9, 1.0 ),  //环境光分量
@@ -47,16 +47,6 @@ var light = {
     specular: vec4( 1.0, 1.0, 1.0, 1.0 ) //镜面反射光分量
 }
 
-// traceball
-var traceball = {
-    mousedown: false,
-    lastPos: [0, 0, 0],
-    startPos: [0, 0, 0],
-    rotationMatrix: mat4(),
-    angularSpeed: 0.0,
-    angularAcceleration: 0.003,
-    axis:[0, 0, 0]
-}
 
 function Rotation(axis, angularSpeed){
     this.axis = axis;
@@ -87,7 +77,7 @@ function Material(
 }
 
 // 创建球体
-function createSphere(origin = [0,0,0], material = new Material(), numTimesToSubdivide =4, texture = null){
+function createSphere(origin = [0,0,0], material = new Material(), numTimesToSubdivide =4, hasTexture = false){
     // 初始四面体坐标
     var va = vec4(0.0, 0.0, -1.0,1);
     var vb = vec4(0.0, 0.942809, 0.333333, 1);
@@ -107,11 +97,16 @@ function createSphere(origin = [0,0,0], material = new Material(), numTimesToSub
         sphere.pointsArray.push([a[0],a[1],a[2], 1]);
         sphere.pointsArray.push([b[0],b[1],b[2], 1]);
         sphere.pointsArray.push([c[0],c[1],c[2], 1]);
-        if(texture==null){
+        if(hasTexture){
+            sphere.texCoordsArray.push([a[0],a[1]]);
+            sphere.texCoordsArray.push([b[0],b[1]]);
+            sphere.texCoordsArray.push([c[0],c[1]]);
+        }else{
             sphere.texCoordsArray.push([0,0]);
             sphere.texCoordsArray.push([0,0]);
             sphere.texCoordsArray.push([0,0]);
         }
+        
     }
     
     function divideTriangle(a, b, c, count) {
@@ -144,60 +139,121 @@ function createSphere(origin = [0,0,0], material = new Material(), numTimesToSub
     return sphere;
 }
 
+// 创建立方体
+function createCube(origin = [0,0,0], material = new Material(), hasTexture = true){
+    var texCoords = [
+        [vec2(0, 0),vec2(0, 0.5),vec2(0.5, 0.5),vec2(0.5, 0)],
+        [vec2(0.5, 0),vec2(0.5, 0.5),vec2(1, 0.5),vec2(1, 0)],
+        [vec2(0, 0.5),vec2(0, 1),vec2(0.5, 1),vec2(0.5, 0.5)],
+        [vec2(0.5, 0.5),vec2(0.5, 1),vec2(1, 1),vec2(1, 0.5)]
+    ];//纹理坐标
+    
+    var vertices = [
+        vec4( -0.5, -0.5,  0.5, 1.0 ),
+        vec4( -0.5,  0.5,  0.5, 1.0 ),
+        vec4( 0.5,  0.5,  0.5, 1.0 ),
+        vec4( 0.5, -0.5,  0.5, 1.0 ),
+        vec4( -0.5, -0.5, -0.5, 1.0 ),
+        vec4( -0.5,  0.5, -0.5, 1.0 ),
+        vec4( 0.5,  0.5, -0.5, 1.0 ),
+        vec4( 0.5, -0.5, -0.5, 1.0 )
+    ];//顶点位置
+
+    var cube = new RenderObject(translate(origin),[],[],[],material);
+
+    function quad(a, b, c, d, texCoord) {
+        // 计算法向量
+        var t1 = subtract(vertices[b], vertices[a]);
+        var t2 = subtract(vertices[c], vertices[b]);
+        var normal = vec4(cross(t1, t2),0);
+    
+        cube.pointsArray.push(vertices[a]);
+        cube.normalsArray.push(normal); 
+        cube.texCoordsArray.push(texCoord[1]);
+    
+        cube.pointsArray.push(vertices[b]);
+        cube.normalsArray.push(normal);
+        cube.texCoordsArray.push(texCoord[0]);
+    
+        cube.pointsArray.push(vertices[c]);
+        cube.normalsArray.push(normal); 
+        cube.texCoordsArray.push(texCoord[3]);
+    
+        cube.pointsArray.push(vertices[a]);
+        cube.normalsArray.push(normal); 
+        cube.texCoordsArray.push(texCoord[1]);
+    
+        cube.pointsArray.push(vertices[c]);
+        cube.normalsArray.push(normal); 
+        cube.texCoordsArray.push(texCoord[3]);
+    
+        cube.pointsArray.push(vertices[d]);
+        cube.normalsArray.push(normal); 
+        cube.texCoordsArray.push(texCoord[2]);
+    }
+    
+    quad( 1, 0, 3, 2 ,texCoords[1]);
+    quad( 2, 3, 7, 6 ,texCoords[3]);
+    quad( 3, 0, 4, 7 ,texCoords[3]);
+    quad( 6, 5, 1, 2 ,texCoords[3]);
+    quad( 4, 5, 6, 7 ,texCoords[2]);
+    quad( 5, 4, 0, 1 ,texCoords[3]);
+
+    return cube;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
-//根据点击的二维坐标计算单位球上的3d坐标
-function calc_trackball_3d_pos(x, y) {
-    var d, a;
-    var v = [];
 
-    v[0] = x;
-    v[1] = y;
-
-    d = v[0]*v[0] + v[1]*v[1];
-    if (d < 1.0)
-      v[2] = Math.sqrt(1.0 - d);
-    else {
-      v[2] = 0.0;
-      a = 1.0 /  Math.sqrt(d);
-      v[0] *= a;
-      v[1] *= a;
-    }
-    return v;
-}
-
-// 鼠标开始移动
-function mouseDown(x, y)
-{
-    traceball.angularSpeed = 0;
-    traceball.mousedown = true;
-    traceball.lastPos = calc_trackball_3d_pos(x, y);
-    traceball.startPos = traceball.lastPos;
-    traceball.startMatrix = transform.modelMatrix;
-}
-
-// 鼠标移动
-function mouseMotion(x,  y)
-{
-    if(traceball.mousedown) {
-        var curPos = calc_trackball_3d_pos(x, y);
-        var axis = cross(traceball.lastPos, curPos);
-        var l_axis = length(axis);
-        if(l_axis!=0){
-            var angle = Math.asin(l_axis);  //单位球, 分母为1
-            transform.modelMatrix = mult(rotate(angle*180/Math.PI, axis) ,transform.modelMatrix);
-            traceball.lastPos = curPos;
-            traceball.angularSpeed = angle*2;
-            traceball.axis = axis;
+// 鼠标跟踪球
+var traceball = {
+    mousedown: false,
+    lastPos: [0, 0, 0],
+    angularSpeed: 0.0,
+    angularAcceleration: 0.003,
+    axis:[0, 0, 0],
+    calc_trackball_3d_pos:function(x,y){ //根据点击的二维坐标计算单位球上的3d坐标
+        var d, a;
+        var v = [];
+    
+        v[0] = x;
+        v[1] = y;
+    
+        d = v[0]*v[0] + v[1]*v[1];
+        if (d < 1.0)
+          v[2] = Math.sqrt(1.0 - d);
+        else {
+          v[2] = 0.0;
+          a = 1.0 /  Math.sqrt(d);
+          v[0] *= a;
+          v[1] *= a;
         }
+        return v;
+    },
+    mouseDown: function(x,y){
+        this.angularSpeed = 0;
+        this.mousedown = true;
+        this.lastPos = this.calc_trackball_3d_pos(x, y);
+        this.startMatrix = transform.modelMatrix;
+    },
+    mouseMotion: function(x,y){
+        if(this.mousedown) {
+            var curPos = this.calc_trackball_3d_pos(x, y);
+            var axis = cross(this.lastPos, curPos);
+            var l_axis = length(axis);
+            if(l_axis!=0){
+                var angle = Math.asin(l_axis);  //单位球, 分母为1
+                transform.modelMatrix = mult(rotate(angle*180/Math.PI, axis) ,transform.modelMatrix);
+                this.lastPos = curPos;
+                this.angularSpeed = angle*2;
+                this.axis = axis;
+            }
+        }
+    },
+    mouseLoss: function(x,y){
+        this.mousedown = false;
     }
 }
 
-// 鼠标停止移动
-function mouseUp(x, y)
-{
-    var curPos = calc_trackball_3d_pos(x, y);
-    traceball.mousedown = false;
-}
 
 function setLightPos(radius, theta, phi){
     // 控制光源位置
@@ -205,13 +261,6 @@ function setLightPos(radius, theta, phi){
     radius*Math.sin(phi), radius*Math.cos(phi)*Math.cos(theta), 1);
     gl.uniform4fv(gl.getUniformLocation(program,"uLightPosition"), flatten(light.pos) );
 }
-
-function applyTransform(){
-    gl.uniformMatrix4fv(uniformLoc.modelMatrix, false, flatten(transform.modelMatrix) );
-    gl.uniformMatrix4fv(uniformLoc.modelViewMatrix, false, flatten(transform.modelViewMatrix));
-    gl.uniformMatrix4fv(uniformLoc.projectionMatrix, false, flatten(transform.projectionMatrix));
-}
-
 
 var texture; //纹理对象
 /*******************创建纹理对象，并设置参数，关联片元着色器中的采样器*********************/
@@ -263,6 +312,28 @@ function setObjectAtrributes(object){
     
 }
 
+function createObjects(){
+    var sphere1 = createSphere([-2.7, 0, 0]);
+    sphere1.selfRotating = new Rotation([0,1,0], 1); // 自转
+
+    var sphere2 = createSphere([2.7, 0, 0]);
+    sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
+    sphere2.material.ambient = vec4(0.2,0.2,0.0,1);
+    sphere2.material.diffuse = vec4(0.2,0.2,0.0,1);
+
+    var cubeMaterial = new Material();
+    cubeMaterial.ambient = vec4(0.2,0.2,0.2,1);
+    cubeMaterial.diffuse = vec4(0.5,0.5,0.5,1);
+    cubeMaterial.specular = vec4(0.5,0.5,0.5,1);
+    cubeMaterial.shininess = 60;
+    var cube = createCube([0,0,0], cubeMaterial);
+    cube.transform = mult(scalem(2.5,2.5,2.5),cube.transform);
+    
+    all_objects.push(sphere1);
+    all_objects.push(sphere2);
+    all_objects.push(cube);
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////
 window.onload = function init() {
     canvas = document.getElementById( "gl-canvas" );
@@ -271,7 +342,7 @@ window.onload = function init() {
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
     // 背景颜色
-    gl.clearColor( 1.0, 1.0, 1.0, 1.0 );
+    gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
     gl.enable(gl.DEPTH_TEST);
     // 加载着色器
     program = initShaders( gl, "vertex-shader", "fragment-shader" );
@@ -294,38 +365,33 @@ window.onload = function init() {
     setLightPos(8, 0, 0);
 
     // 创建模型数据
-    var sphere1 = createSphere([-2, 0, 0]);
-    var sphere2 = createSphere([2, 0, 0]);
-    // 自转效果
-    sphere1.selfRotating = new Rotation([1,0,0],1);
-    all_objects.push(sphere1);
-    all_objects.push(sphere2);
+    createObjects();
 
     // 鼠标跟踪球
     // canvas 边界
     var bbox = canvas.getBoundingClientRect();
     canvas.addEventListener("mousedown", function(event){
-        var x = 2*(event.clientX-bbox.left)/canvas.width-1;
-        var y = 2*(canvas.height-(event.clientY-bbox.top))/canvas.height-1;
-        mouseDown(x,y);
+        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
+        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
+        traceball.mouseDown(x,y);
     });
     
     canvas.addEventListener("mouseup", function(event){
-        var x = 2*(event.clientX-bbox.left)/canvas.width-1;
-        var y = 2*(canvas.height-(event.clientY-bbox.top))/canvas.height-1;
-        mouseUp(x,y);
+        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
+        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
+        traceball.mouseLoss(x,y);
     });
 
     canvas.addEventListener("mousemove", function(event){
-        var x = 2*(event.clientX-bbox.left)/canvas.width-1;
-        var y = 2*(canvas.height-(event.clientY-bbox.top))/canvas.height-1;
-        mouseMotion(x,y);
+        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
+        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
+        traceball.mouseMotion(x,y);
     });
 
     canvas.addEventListener("mouseout",function(event){
-        var x = 2*(event.clientX-bbox.left)/canvas.width-1;
-        var y = 2*(canvas.height-(event.clientY-bbox.top))/canvas.height-1;
-        mouseUp(x,y);
+        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
+        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
+        traceball.mouseLoss(x,y);
     });
    
     // 加载纹理
@@ -334,11 +400,15 @@ window.onload = function init() {
 	image.onload = function() {
         configureTexture( image );
     }   
-
     // 绘制
     render();
 }
 
+function selfRotate(mat, angle, axis){
+    var T = inverse4(mat);
+    var R = rotate(angle, axis);
+    return mult(mat,mult(R,mult(T,mat)));
+}
 
 function render() { 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -353,15 +423,14 @@ function render() {
 
     // 绘制所有对象
     for (const object of all_objects) {
-
         // 传递顶点、法向量、纹理等attributes
         setObjectAtrributes(object);
 
         // 对象本身的变换（区别于整体场景）
         // 自转
         var rotation = object.selfRotating;
-        if(object.selfRotating!=null){
-            object.transform = mult(rotate(rotation.angularSpeed, rotation.axis), object.transform);
+        if(rotation!=null){
+            object.transform = selfRotate(object.transform,rotation.angularSpeed,rotation.axis);
         }
         gl.uniformMatrix4fv( uniformLoc.objectTransformMatrix,false, flatten(object.transform));
 
