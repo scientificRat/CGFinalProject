@@ -248,7 +248,7 @@ var traceball = {
                 var angle = Math.asin(l_axis);  //单位球, 分母为1
                 transform.modelMatrix = mult(rotate(angle*180/Math.PI, axis) ,transform.modelMatrix);
                 this.lastPos = curPos;
-                this.angularSpeed = angle*2;
+                this.angularSpeed = 0.6 *this.angularSpeed + 0.4 * angle*3;
                 this.axis = axis;
             }
         }
