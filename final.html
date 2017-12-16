@@ -69,7 +69,7 @@
             vec4 fColor = ambient + diffuse +specular;
             fColor.a = 1.0;
             if(vTexCoord.x==0.0 && vTexCoord.y==0.0 ){
-                
+                fColor.a = 0.5;
                 gl_FragColor =  fColor;
             }else{
                 gl_FragColor =  fColor*texture2D( texture, vTexCoord );

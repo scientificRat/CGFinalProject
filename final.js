@@ -91,9 +91,13 @@ function createSphere(origin = [0,0,0], material = new Material(), numTimesToSub
         var t1 = subtract(b, a);
         var t2 = subtract(b, c);
         var normal = vec4(cross(t1, t2),0);
-        sphere.normalsArray.push(normal);
-        sphere.normalsArray.push(normal);
-        sphere.normalsArray.push(normal);
+        // sphere.normalsArray.push(normal);
+        // sphere.normalsArray.push(normal);
+        // sphere.normalsArray.push(normal);
+        sphere.normalsArray.push([a[0],a[1],a[2], 0]);
+        sphere.normalsArray.push([b[0],b[1],b[2], 0]);
+        sphere.normalsArray.push([c[0],c[1],c[2], 0]);
+
         sphere.pointsArray.push([a[0],a[1],a[2], 1]);
         sphere.pointsArray.push([b[0],b[1],b[2], 1]);
         sphere.pointsArray.push([c[0],c[1],c[2], 1]);
@@ -328,10 +332,13 @@ function createObjects(){
     cubeMaterial.shininess = 60;
     var cube = createCube([0,0,0], cubeMaterial);
     cube.transform = mult(scalem(2.5,2.5,2.5),cube.transform);
+
+    var cube_spetial = createCube([0,0,0],cubeMaterial,false);
     
     all_objects.push(sphere1);
     all_objects.push(sphere2);
     all_objects.push(cube);
+    all_objects.push(cube_spetial);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -344,6 +351,10 @@ window.onload = function init() {
     // 背景颜色
     gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
     gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LESS);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
+    gl.enable(gl.CULL_FACE);
     // 加载着色器
     program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
@@ -421,11 +432,9 @@ function render() {
     // 场景模型变换
     gl.uniformMatrix4fv(uniformLoc.modelMatrix, false, flatten(transform.modelMatrix) );
 
-    // 绘制所有对象
-    for (const object of all_objects) {
+    function renderObject(object){
         // 传递顶点、法向量、纹理等attributes
         setObjectAtrributes(object);
-
         // 对象本身的变换（区别于整体场景）
         // 自转
         var rotation = object.selfRotating;
@@ -443,9 +452,23 @@ function render() {
         gl.uniform4fv( uniformLoc.diffuseProduct, flatten(diffuseProduct) );
         gl.uniform4fv( uniformLoc.specularProduct, flatten(specularProduct) );
         gl.uniform1f( uniformLoc.shininess, object.material.shininess );
-
         // 绘制
+        gl.cullFace(gl.BACK); 
+        gl.drawArrays( gl.TRIANGLES, 0, object.pointsArray.length);
+        gl.cullFace(gl.FRONT);
         gl.drawArrays( gl.TRIANGLES, 0, object.pointsArray.length);
     }
+    // 绘制所有对象
+    for (const object of all_objects) {
+        
+    }
+    renderObject(all_objects[2]);
+    gl.depthMask(false);
+    renderObject(all_objects[0]);
+    renderObject(all_objects[1]);
+    gl.depthMask(true);
+
+    
+
     window.requestAnimFrame(render);
 }
