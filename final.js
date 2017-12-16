@@ -26,6 +26,34 @@ var sphere = {
     origin:[-2, 0, 0]
 }
 
+var objects=[
+    {
+        transform: translate(-2,0,0),
+        pointsArray:[],
+        normalsArray:[],
+        texCoordsArray: null,
+        material:{
+            ambient: vec4( 0.5, 0.0, 0.0, 1.0 ),
+            diffuse: vec4( 0.5, 0.0, 0.0, 1.0 ),
+            specular: vec4( 0.5, 0.5, 0.5, 1.0 ),
+            shininess: 20.0
+        }
+    },
+    {
+        transform: translate(2,0,0),
+        pointsArray:[],
+        normalsArray:[],
+        texCoordsArray: null,
+        material:{
+            ambient: vec4( 0.5, 0.0, 0.0, 1.0 ),
+            diffuse: vec4( 0.5, 0.0, 0.0, 1.0 ),
+            specular: vec4( 0.5, 0.5, 0.5, 1.0 ),
+            shininess: 20.0
+        }
+    }
+];
+
+
 var sphere2 = {
     pointsArray:[], //顶点数组 
     normalsArray:[], //法向量数组
@@ -40,7 +68,7 @@ var sphere2 = {
 
 // camera
 var camera = {
-    pos:[0, 0, 1.5],
+    pos:[0, 0, 8],
     look:[0, 0, 0],
     up:[0, 1, 0]
 };
@@ -54,7 +82,8 @@ var transform = {
         0,0,0,1
     ),
     modelViewMatrix: lookAt(camera.pos, camera.look, camera.up),
-    projectionMatrix: ortho(-3, 3, -3, 3, -10, 10),
+    // projectionMatrix: ortho(-3, 3, -3, 3, 0, 12),
+    projectionMatrix: perspective(60,1, 4, 11)
 }
 
 // traceball
@@ -354,6 +383,8 @@ function render() {
     // 模型变换
     gl.uniformMatrix4fv(uniformLoc.modelMatrix, false, flatten(transform.modelMatrix) );
     // 绘制
-    gl.drawArrays( gl.TRIANGLES, 0, sphere.pointsArray.length);
+    var size = sphere.pointsArray.length/2;
+    gl.drawArrays( gl.TRIANGLES, 0, size);
+    gl.drawArrays( gl.TRIANGLES, size, size);
     window.requestAnimFrame(render);
 }
