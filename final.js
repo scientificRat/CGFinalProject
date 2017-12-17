@@ -24,13 +24,13 @@ var camera = {
     pos:[0, 0, 8],
     look:[0, 0, 0],
     up:[0, 1, 0],
-    fovy: 55, aspect: 1, near: 4, far: 12, left:-4,right:4,bottom:-4,top:4,
+    fovy: 55, aspect: 1, near: 4, far: 14, left:-4,right:4,bottom:-4,top:4,
     ortho: false,  // 是否正交投影
     _modelViewMatrix: null,
     _projectionMatrix: null,
     apply: function(){
         this._modelViewMatrix = lookAt(this.pos, this.look, this.up);
-        if(ortho){
+        if(!this.ortho){
             this._projectionMatrix = perspective(this.fovy, this.aspect, this.near, this.far);
         } else{
             this._projectionMatrix = ortho(this.left, this.right, this.bottom, this.top, this.near, this.far);
@@ -42,7 +42,7 @@ var camera = {
 
 // scene --整体
 var scene = {
-    _modelMatrix: rotate(20,[1,0,0]),
+    _modelMatrix: rotate(20, [1,0,0]),
     rotate: function(angle,axis){
         this._modelMatrix = mult(rotate(angle, axis) ,this._modelMatrix);
     },
@@ -302,9 +302,47 @@ function createObjects(){
 
     transparent_objects.push(sphere1);
     transparent_objects.push(sphere2);
-    opaque_objects.push(sphere3);
     opaque_objects.push(cube);
+    opaque_objects.push(sphere3);
+    greenBallCtr.obj = sphere3;
 }
+
+var greenBallCtr = {
+    obj:null,
+    currSubDivided:3,
+    divideDislay: document.getElementById("subdivided-count"),
+    angularSpeedDislay: document.getElementById("angular-speed"),
+    applySubdivide: function (){
+        var new_one = createSphere([0,2.7,0], this.currSubDivided);
+        new_one.material = this.obj.material;
+        new_one.selfRotating = this.obj.selfRotating;
+        opaque_objects.splice(opaque_objects.indexOf(this.obj), 1);
+        opaque_objects.push(new_one);
+        this.divideDislay.textContent= this.currSubDivided;
+
+    },
+    decreaseSubdivide: function (){
+        if(this.currSubDivided > 0){
+            this.currSubDivided--;
+            this.applySubdivide();
+        }
+    },
+    increaseSubdivide: function (){
+        if(this.currSubDivided < 6){
+            this.currSubDivided++;
+            this.applySubdivide();
+        }
+    },
+    decreaseAngularSpeed: function(){
+        this.obj.selfRotating.angularSpeed -= 0.2;
+        this.angularSpeedDislay.textContent= this.obj.selfRotating.angularSpeed.toFixed(1);
+    },
+    increaseAngularSpeed: function(){
+        this.obj.selfRotating.angularSpeed += 0.2;
+        this.angularSpeedDislay.textContent= this.obj.selfRotating.angularSpeed.toFixed(1);
+    }
+}
+
 
 // 创建纹理对象，并设置参数，关联片元着色器中的采样器
 function configureTexture( image ) {
@@ -393,6 +431,18 @@ window.onload = function init() {
         var x = 2*(event.clientX-bbox.left)/bbox.width-1;
         var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
         traceball.mouseLoss(x,y);
+    });
+
+    var projectionModeDisplay =  document.getElementById("projection-mode");
+    document.getElementById("switch-projection-mode").addEventListener("click",function(){
+        camera.ortho =!camera.ortho;
+        camera.apply();
+        if(camera.ortho){
+            projectionModeDisplay.textContent="正交";
+        }else{
+            projectionModeDisplay.textContent="透视";
+        }
+        
     });
 
     // 键盘平移相机
