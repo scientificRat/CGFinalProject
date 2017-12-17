@@ -16,27 +16,24 @@ var uniformLoc = {
     shininess: null
 };
 
-// 所有要绘制的objects
-var all_objects=[];
+// 不透明和透明 objects
+var opaque_objects = [];
+var transparent_objects = [];
 
 // camera
 var camera = {
     pos:[0, 0, 8],
     look:[0, 0, 0],
-    up:[0, 1, 0]
+    up:[0, 1, 0],
+    fovy: 55, aspect: 1, near: 4, far: 12
 };
 
 // scene transform
 var transform = {
-    modelMatrix: mat4(
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-    ),
+    modelMatrix: rotate(20,[1,0,0]),
     modelViewMatrix: lookAt(camera.pos, camera.look, camera.up),
     // projectionMatrix: ortho(-3, 3, -3, 3, 0, 12),
-    projectionMatrix: perspective(55,1, 4, 11)
+    projectionMatrix: perspective(camera.fovy, camera.aspect, camera.near, camera.far)
 }
 
 // 全局光源
@@ -44,7 +41,13 @@ var light = {
     pos: vec4(0.0, 0.0, 0.0, 1.0),       //齐次坐标 最后一个分量为1表示点光源
     ambient: vec4(0.9, 0.9, 0.9, 1.0 ),  //环境光分量
     diffuse: vec4( 1.0, 1.0, 1.0, 1.0 ), //漫反射光分量
-    specular: vec4( 1.0, 1.0, 1.0, 1.0 ) //镜面反射光分量
+    specular: vec4( 1.0, 1.0, 1.0, 1.0 ), //镜面反射光分量
+    applyPosByPolar: function(radius, theta, phi){
+        // 控制光源位置
+        this.pos = vec4(radius*Math.cos(phi)*Math.sin(theta),
+        radius*Math.sin(phi), radius*Math.cos(phi)*Math.cos(theta), 1);
+        gl.uniform4fv(gl.getUniformLocation(program,"uLightPosition"), flatten(this.pos) );
+    }
 }
 
 
@@ -77,7 +80,7 @@ function Material(
 }
 
 // 创建球体
-function createSphere(origin = [0,0,0], material = new Material(), numTimesToSubdivide =4, hasTexture = false){
+function createSphere(origin = [0,0,0], numTimesToSubdivide =4, material = new Material(), hasTexture = false){
     // 初始四面体坐标
     var va = vec4(0.0, 0.0, -1.0,1);
     var vb = vec4(0.0, 0.942809, 0.333333, 1);
@@ -173,27 +176,37 @@ function createCube(origin = [0,0,0], material = new Material(), hasTexture = tr
     
         cube.pointsArray.push(vertices[a]);
         cube.normalsArray.push(normal); 
-        cube.texCoordsArray.push(texCoord[1]);
-    
+        
         cube.pointsArray.push(vertices[b]);
         cube.normalsArray.push(normal);
-        cube.texCoordsArray.push(texCoord[0]);
-    
+ 
         cube.pointsArray.push(vertices[c]);
         cube.normalsArray.push(normal); 
-        cube.texCoordsArray.push(texCoord[3]);
-    
+
         cube.pointsArray.push(vertices[a]);
         cube.normalsArray.push(normal); 
-        cube.texCoordsArray.push(texCoord[1]);
-    
+
         cube.pointsArray.push(vertices[c]);
         cube.normalsArray.push(normal); 
-        cube.texCoordsArray.push(texCoord[3]);
-    
+
         cube.pointsArray.push(vertices[d]);
         cube.normalsArray.push(normal); 
-        cube.texCoordsArray.push(texCoord[2]);
+
+        if(hasTexture){
+            cube.texCoordsArray.push(texCoord[1]);
+            cube.texCoordsArray.push(texCoord[0]);
+            cube.texCoordsArray.push(texCoord[3]);
+            cube.texCoordsArray.push(texCoord[1]);
+            cube.texCoordsArray.push(texCoord[3]);
+            cube.texCoordsArray.push(texCoord[2]);
+        }else{
+            cube.texCoordsArray.push([0,0]);
+            cube.texCoordsArray.push([0,0]);
+            cube.texCoordsArray.push([0,0]);
+            cube.texCoordsArray.push([0,0]);
+            cube.texCoordsArray.push([0,0]);
+            cube.texCoordsArray.push([0,0]);
+        }
     }
     
     quad( 1, 0, 3, 2 ,texCoords[1]);
@@ -258,14 +271,6 @@ var traceball = {
     }
 }
 
-
-function setLightPos(radius, theta, phi){
-    // 控制光源位置
-    light.pos = vec4(radius*Math.cos(phi)*Math.sin(theta),
-    radius*Math.sin(phi), radius*Math.cos(phi)*Math.cos(theta), 1);
-    gl.uniform4fv(gl.getUniformLocation(program,"uLightPosition"), flatten(light.pos) );
-}
-
 var texture; //纹理对象
 /*******************创建纹理对象，并设置参数，关联片元着色器中的采样器*********************/
 function configureTexture( image ) {
@@ -318,12 +323,17 @@ function setObjectAtrributes(object){
 
 function createObjects(){
     var sphere1 = createSphere([-2.7, 0, 0]);
-    sphere1.selfRotating = new Rotation([0,1,0], 1); // 自转
+    //sphere1.selfRotating = new Rotation([0,1,0], 1); // 自转
 
     var sphere2 = createSphere([2.7, 0, 0]);
-    sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
-    sphere2.material.ambient = vec4(0.2,0.2,0.0,1);
-    sphere2.material.diffuse = vec4(0.2,0.2,0.0,1);
+    //sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
+    sphere2.material.ambient = vec4(0.0, 0.1, 0.2, 1);
+    sphere2.material.diffuse = vec4(0.0, 0.1, 0.2, 1);
+
+    var sphere3 = createSphere([0,2.7,0], 2);
+    sphere3.selfRotating = new Rotation([0,1,0], 1); // 自转
+    sphere3.material.ambient = vec4(0.2, 0.2, 0, 1);
+    sphere3.material.diffuse = vec4(0.2, 0.2, 0, 1);
 
     var cubeMaterial = new Material();
     cubeMaterial.ambient = vec4(0.2,0.2,0.2,1);
@@ -332,13 +342,12 @@ function createObjects(){
     cubeMaterial.shininess = 60;
     var cube = createCube([0,0,0], cubeMaterial);
     cube.transform = mult(scalem(2.5,2.5,2.5),cube.transform);
+    //cube.selfRotating = new Rotation([1,0,0], 1); // 自转
 
-    var cube_spetial = createCube([0,0,0],cubeMaterial,false);
-    
-    all_objects.push(sphere1);
-    all_objects.push(sphere2);
-    all_objects.push(cube);
-    all_objects.push(cube_spetial);
+    transparent_objects.push(sphere1);
+    transparent_objects.push(sphere2);
+    opaque_objects.push(sphere3);
+    opaque_objects.push(cube);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -351,7 +360,7 @@ window.onload = function init() {
     // 背景颜色
     gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
     gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LESS);
+    gl.depthFunc(gl.GL_LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); 
     gl.enable(gl.CULL_FACE);
@@ -367,13 +376,14 @@ window.onload = function init() {
     uniformLoc.diffuseProduct = gl.getUniformLocation(program, "uDiffuseProduct");
     uniformLoc.specularProduct =  gl.getUniformLocation(program, "uSpecularProduct");
     uniformLoc.shininess = gl.getUniformLocation(program, "uShininess");
-
+    uniformLoc.alpha = gl.getUniformLocation(program, "uAlpha");
+    
     // 固定的uniform变量
     gl.uniformMatrix4fv(uniformLoc.modelViewMatrix, false, flatten(transform.modelViewMatrix));
     gl.uniformMatrix4fv(uniformLoc.projectionMatrix, false, flatten(transform.projectionMatrix));
 
     // 设置光源位置
-    setLightPos(8, 0, 0);
+    light.applyPosByPolar(8, 0, -0.3);
 
     // 创建模型数据
     createObjects();
@@ -458,17 +468,18 @@ function render() {
         gl.cullFace(gl.FRONT);
         gl.drawArrays( gl.TRIANGLES, 0, object.pointsArray.length);
     }
-    // 绘制所有对象
-    for (const object of all_objects) {
-        
+    // 绘制不透明对象
+    gl.uniform1f( uniformLoc.alpha, 1 )
+    for (const object of opaque_objects) {
+        renderObject(object);
     }
-    renderObject(all_objects[2]);
+    // 绘制透明对象
+    gl.uniform1f( uniformLoc.alpha, 0.6 )
     gl.depthMask(false);
-    renderObject(all_objects[0]);
-    renderObject(all_objects[1]);
+    for (const object of transparent_objects) {
+        renderObject(object);
+    }
     gl.depthMask(true);
-
-    
 
     window.requestAnimFrame(render);
 }

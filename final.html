@@ -5,9 +5,10 @@
         <style>
             *{font-family: "sans-serif"}
             button{user-select: none; cursor: pointer;}
-            canvas{box-sizing: border-box; background: #eee;border-radius: 4px;cursor:grab}
+            canvas{width:512px; box-sizing: border-box; background: #eee;border-radius: 4px;cursor:grab}
             canvas:active{cursor: grabbing}
             #copyright{display:inline-block;position:absolute;bottom:10px;right:10px;z-index:1;color:#aaa;font-size: 0.7em;user-select: none;-moz-user-select: none}
+            #control-panel{display:inline-block;background:#eee; vertical-align: top;min-width: 100px;border-radius: 4px;padding: 10px}
         </style>
         <title>Final Project</title>
     </head>
@@ -51,8 +52,9 @@
 
         uniform vec4 uAmbientProduct, uDiffuseProduct, uSpecularProduct;
         uniform float uShininess;
+        uniform float uAlpha;
         uniform sampler2D texture;
-
+        
         varying vec3 vN, vL, vE;
         varying vec2 vTexCoord;
 
@@ -69,9 +71,8 @@
             if(dot(vL, vN) < 0.0 ) specular = vec4(0.0, 0.0, 0.0, 1.0);
         
             vec4 fColor = ambient + diffuse +specular;
-            fColor.a = 1.0;
+            fColor.a = uAlpha;
             if(vTexCoord.x==0.0 && vTexCoord.y==0.0 ){
-                fColor.a = 0.5;
                 gl_FragColor =  fColor;
             }else{
                 gl_FragColor =  fColor*texture2D( texture, vTexCoord );
@@ -84,7 +85,11 @@
         <h1>Final Project</h1>
         <div style="position:relative;display:inline-block">
             <div id="copyright">&copy 2017 黄正跃</div>
-            <canvas id="gl-canvas" width="1024" height="1024" style="width:512px;position:relative">您的浏览器不支持HTML5 canvas</canvas>
+            <canvas id="gl-canvas" width="1024" height="1024">您的浏览器不支持HTML5 canvas</canvas>
+        </div>
+        <div id="control-panel">
+            <button>增加</button>
+            <button>减少</button>
         </div>
         <script type="text/javascript" src="../Common/webgl-utils.js"></script>
         <script type="text/javascript" src="../Common/initShaders.js"></script>
