@@ -308,7 +308,7 @@ function createObjects(){
 }
 
 var greenBallCtr = {
-    obj:null,
+    obj: null,
     currSubDivided:3,
     divideDislay: document.getElementById("subdivided-count"),
     angularSpeedDislay: document.getElementById("angular-speed"),
@@ -405,44 +405,55 @@ window.onload = function init() {
     camera.apply();
     // 创建模型数据
     createObjects();
-     
+
     // 鼠标跟踪球
-    // canvas 边界
-    var bbox = canvas.getBoundingClientRect();
-    canvas.addEventListener("mousedown", function(event){
-        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
-        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
-        traceball.mouseDown(x,y);
+    function convertCoordinate(x,y){
+        var bbox = canvas.getBoundingClientRect();
+        return [2*(x-bbox.left)/bbox.width-1,2*(bbox.height-(y-bbox.top))/bbox.height-1];
+    }
+
+    $(canvas).bind('mousedown',function(event){
+        var pos = convertCoordinate(event.pageX, event.pageY);
+        traceball.mouseDown(pos[0],pos[1]);
+    });
+
+    $(canvas).bind('touchstart',function(event){
+        event.preventDefault();
+        var pos = convertCoordinate(event.changedTouches[0].pageX, event.changedTouches[0].pageY);
+        traceball.mouseDown(pos[0],pos[1]);
     });
     
-    canvas.addEventListener("mouseup", function(event){
-        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
-        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
-        traceball.mouseLoss(x,y);
+    $(canvas).bind("mouseup mouseout", function(event){
+        var pos = convertCoordinate(event.pageX, event.pageY);
+        traceball.mouseLoss(pos[0],pos[1]);
     });
 
-    canvas.addEventListener("mousemove", function(event){
-        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
-        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
-        traceball.mouseMotion(x,y);
+    $(canvas).bind('touchend touchcancel',function(event){
+        event.preventDefault();
+        var pos = convertCoordinate(event.changedTouches[0].pageX, event.changedTouches[0].pageY);
+        traceball.mouseLoss(pos[0],pos[1]);
     });
 
-    canvas.addEventListener("mouseout",function(event){
-        var x = 2*(event.clientX-bbox.left)/bbox.width-1;
-        var y = 2*(bbox.height-(event.clientY-bbox.top))/bbox.height-1;
-        traceball.mouseLoss(x,y);
+    $(canvas).bind("mousemove", function(event){
+        var pos = convertCoordinate(event.pageX, event.pageY);
+        traceball.mouseMotion(pos[0],pos[1]);
     });
 
-    var projectionModeDisplay =  document.getElementById("projection-mode");
-    document.getElementById("switch-projection-mode").addEventListener("click",function(){
+    $(canvas).bind('touchmove',function(event){
+        event.preventDefault();
+        var pos = convertCoordinate(event.changedTouches[0].pageX, event.changedTouches[0].pageY);
+        traceball.mouseMotion(pos[0],pos[1]);
+    });
+
+    var projectionModeDisplay =  $("#projection-mode");
+    $("#switch-projection-mode").bind("click",function(){
         camera.ortho =!camera.ortho;
         camera.apply();
         if(camera.ortho){
-            projectionModeDisplay.textContent="正交";
+            projectionModeDisplay.text("正交");
         }else{
-            projectionModeDisplay.textContent="透视";
+            projectionModeDisplay.text("透视");
         }
-        
     });
 
     // 键盘平移相机
