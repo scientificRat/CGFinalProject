@@ -86,12 +86,12 @@
             
             if(dot(vL, vN) < 0.0 ) specular = vec3(0.0, 0.0, 0.0);
         
-            vec4 fColor = vec4(clamp(ambient + 50.0/(vD*(vD+0.02)) * (diffuse + specular), 0.0, 1.0),1.0);
+            vec4 fColor = vec4(ambient + 50.0/(vD*(vD+0.02)) * (diffuse + specular),1.0);
             fColor.a = uAlpha;
             if(vTexCoord.x==0.0 && vTexCoord.y==0.0 ){
                 gl_FragColor = fColor;
             }else{
-                gl_FragColor =  fColor*texture2D( uTexture, vTexCoord );
+                gl_FragColor = fColor*texture2D( uTexture, vTexCoord );
             }
             
         }

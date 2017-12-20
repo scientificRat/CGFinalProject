@@ -149,8 +149,8 @@ function RenderObject(transform, pointsArray, normalsArray,texCoordsArray, mater
 // data-struct Material
 function Material(
     ambient=vec3( 0.5, 0.0, 0.0),
-    diffuse=vec3( 0.5, 0.0, 0.0 ),
-    specular=vec3( 0.5, 0.5, 0.5 ),
+    diffuse=vec3( 0.35, 0.0, 0.0 ),
+    specular=vec3( 0.4, 0.4, 0.4 ),
     shininess=20.0) {
 
     this.ambient = ambient;
@@ -292,8 +292,8 @@ function createObjects(){
 
     var sphere2 = createSphere([2.7, 0, 0]);
     //sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
-    sphere2.material.ambient = vec3(0.0, 0.1, 0.2);
-    sphere2.material.diffuse = vec3(0.0, 0.1, 0.2);
+    sphere2.material.ambient = vec3(0.0, 0.1, 0.14);
+    sphere2.material.diffuse = vec3(0.0, 0.1, 0.14);
 
     var sphere3 = createSphere([0,2.7,0], 2);
     sphere3.selfRotating = new Rotation([0,1,0], 1); // 自转
@@ -372,11 +372,12 @@ function configureTexture( image ) {
 	// gl.TEXTURE_MAG_FILTER：像素比纹素小，多个像素对应单个纹素，纹理需要放大
 	// gl.NEAREST :点采样方式得相邻的纹理
     gl.texParameteri( gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
-
 	//关联当前纹理对象到片元SHADER中的采样器对象uTexture
     gl.uniform1i(gl.getUniformLocation(program, "uTexture"), 0);
 }
-
+var vBuffer;
+var nBuffer;
+var tBuffer;
 //////////////////////////////////////////////////////////////////////////////////////////
 window.onload = function init() {
     canvas = document.getElementById( "gl-canvas" );
@@ -385,7 +386,7 @@ window.onload = function init() {
 
     gl.viewport( 0, 0, canvas.width, canvas.height );
     // 背景颜色
-    gl.clearColor( 0.0, 0.0, 0.0, 0.0 );
+    gl.clearColor( 0.93, 0.93, 0.93, 1.0 );
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -394,6 +395,10 @@ window.onload = function init() {
     // 加载着色器
     program = initShaders( gl, "vertex-shader", "fragment-shader" );
     gl.useProgram( program );
+    // attributes buffers
+    vBuffer = gl.createBuffer();
+    nBuffer = gl.createBuffer();
+    tBuffer = gl.createBuffer();
     // 初始化uniform
     uniformLoc.objectTransformMatrix = gl.getUniformLocation( program, "uObjectTransformMatrix")
     uniformLoc.modelMatrix = gl.getUniformLocation( program, "uModelMatrix")
@@ -522,7 +527,6 @@ function selfRotate(mat, angle, axis){
 
 function setObjectAtrributes(object){
     // 顶点 atrributes
-    var vBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, flatten(object.pointsArray), gl.STATIC_DRAW);
     var aPosition = gl.getAttribLocation( program, "aPosition");
@@ -530,7 +534,7 @@ function setObjectAtrributes(object){
     gl.enableVertexAttribArray(aPosition);
 
     // 法向量 atrributes
-    var nBuffer = gl.createBuffer();
+    
     gl.bindBuffer( gl.ARRAY_BUFFER, nBuffer);
     gl.bufferData( gl.ARRAY_BUFFER, flatten(object.normalsArray), gl.STATIC_DRAW );
     var aNormal = gl.getAttribLocation( program, "aNormal" );
@@ -538,7 +542,7 @@ function setObjectAtrributes(object){
     gl.enableVertexAttribArray( aNormal);
 
     // texture
-    var tBuffer = gl.createBuffer();
+   
     gl.bindBuffer( gl.ARRAY_BUFFER, tBuffer );
     gl.bufferData( gl.ARRAY_BUFFER, flatten(object.texCoordsArray), gl.STATIC_DRAW );
     var aTexCoord = gl.getAttribLocation( program, "aTexCoord" );
