@@ -24,10 +24,19 @@ var camera = {
     pos:[0, 0, 8],
     look:[0, 0, 0],
     up:[0, 1, 0],
-    fovy: 55, aspect: 1, near: 4, far: 14, left:-4,right:4,bottom:-4,top:4,
+    speed:[0, 0, 0],
+    fovy: 55, aspect: 1, near: 1.5, far: 140, left:-4,right:4,bottom:-4,top:4,
     ortho: false,  // 是否正交投影
     _modelViewMatrix: null,
     _projectionMatrix: null,
+    moveBySpeed:function(){
+        this.pos[0]+=this.speed[0];
+        this.pos[1]+=this.speed[1];
+        this.pos[2]+=this.speed[2];
+        this.look[0]+=this.speed[0];
+        this.look[1]+=this.speed[1];
+        this.look[2]+=this.speed[2];
+    },
     apply: function(){
         this._modelViewMatrix = lookAt(this.pos, this.look, this.up);
         if(!this.ortho){
@@ -54,7 +63,7 @@ var scene = {
 // 全局光源
 var light = {
     pos: vec4(0.0, 0.0, 0.0, 1.0),       //齐次坐标 最后一个分量为1表示点光源
-    ambient: vec4(0.9, 0.9, 0.9, 1.0 ),  //环境光分量
+    ambient: vec4(1.0, 1.0, 1.0, 1.0 ),  //环境光分量
     diffuse: vec4( 1.0, 1.0, 1.0, 1.0 ), //漫反射光分量
     specular: vec4( 1.0, 1.0, 1.0, 1.0 ), //镜面反射光分量
     setPosByPolar: function(radius, theta, phi){
@@ -139,9 +148,9 @@ function RenderObject(transform, pointsArray, normalsArray,texCoordsArray, mater
 
 // data-struct Material
 function Material(
-    ambient=vec4( 0.5, 0.0, 0.0, 1.0 ),
-    diffuse=vec4( 0.5, 0.0, 0.0, 1.0 ),
-    specular=vec4( 0.5, 0.5, 0.5, 1.0 ),
+    ambient=vec4( 0.5, 0.0, 0.0, 0.0 ),
+    diffuse=vec4( 0.5, 0.0, 0.0, 0.0 ),
+    specular=vec4( 0.5, 0.5, 0.5, 0.0 ),
     shininess=20.0) {
 
     this.ambient = ambient;
@@ -283,18 +292,18 @@ function createObjects(){
 
     var sphere2 = createSphere([2.7, 0, 0]);
     //sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
-    sphere2.material.ambient = vec4(0.0, 0.1, 0.2, 1);
-    sphere2.material.diffuse = vec4(0.0, 0.1, 0.2, 1);
+    sphere2.material.ambient = vec4(0.0, 0.1, 0.2, 0);
+    sphere2.material.diffuse = vec4(0.0, 0.1, 0.2, 0);
 
     var sphere3 = createSphere([0,2.7,0], 2);
     sphere3.selfRotating = new Rotation([0,1,0], 1); // 自转
-    sphere3.material.ambient = vec4(0.2, 0.2, 0, 1);
-    sphere3.material.diffuse = vec4(0.2, 0.2, 0, 1);
+    sphere3.material.ambient = vec4(0.2, 0.2, 0, 0);
+    sphere3.material.diffuse = vec4(0.2, 0.2, 0, 0);
 
     var cubeMaterial = new Material();
-    cubeMaterial.ambient = vec4(0.2,0.2,0.2,1);
-    cubeMaterial.diffuse = vec4(0.5,0.5,0.5,1);
-    cubeMaterial.specular = vec4(0.5,0.5,0.5,1);
+    cubeMaterial.ambient = vec4(0.2,0.2,0.2, 0);
+    cubeMaterial.diffuse = vec4(0.5,0.5,0.5, 0);
+    cubeMaterial.specular = vec4(0.5,0.5,0.5, 0);
     cubeMaterial.shininess = 60;
     var cube = createCube([0,0,0], cubeMaterial);
     cube.transform = mult(scalem(2.5,2.5,2.5),cube.transform);
@@ -334,11 +343,15 @@ var greenBallCtr = {
         }
     },
     decreaseAngularSpeed: function(){
-        this.obj.selfRotating.angularSpeed -= 0.2;
+        this.obj.selfRotating.angularSpeed -= 0.4;
         this.angularSpeedDislay.textContent= this.obj.selfRotating.angularSpeed.toFixed(1);
     },
     increaseAngularSpeed: function(){
-        this.obj.selfRotating.angularSpeed += 0.2;
+        this.obj.selfRotating.angularSpeed += 0.4;
+        this.angularSpeedDislay.textContent= this.obj.selfRotating.angularSpeed.toFixed(1);
+    },
+    inverseAngularSpeed:function(){
+        this.obj.selfRotating.angularSpeed = -this.obj.selfRotating.angularSpeed;
         this.angularSpeedDislay.textContent= this.obj.selfRotating.angularSpeed.toFixed(1);
     }
 }
@@ -399,7 +412,10 @@ window.onload = function init() {
     }  
     
     // 设置光源位置
-    light.setPosByPolar(8, 0, -0.3);
+    var lightR_input = $("#light-r");
+    var lightTheta_input = $("#light-theta");
+    var lightPhi_input = $("#light-phi");
+    light.setPosByPolar(lightR_input.val(), lightTheta_input.val(), lightPhi_input.val());
     light.apply();
     // 设置相机
     camera.apply();
@@ -455,35 +471,44 @@ window.onload = function init() {
             projectionModeDisplay.text("透视");
         }
     });
-
+    // 移动光照
+    lightR_input.bind('input',(function(){
+        light.setPosByPolar(lightR_input.val(), lightTheta_input.val(), lightPhi_input.val());
+        light.apply();
+    }));
+    lightTheta_input.bind('input',(function(){
+        light.setPosByPolar(lightR_input.val(), lightTheta_input.val(), lightPhi_input.val());
+        light.apply();
+    }));
+    lightPhi_input.bind('input',(function(){
+        light.setPosByPolar(lightR_input.val(), lightTheta_input.val(), lightPhi_input.val());
+        light.apply();
+    }));
     // 键盘平移相机
     document.onkeydown = function(event){
-        //console.log(event.keyCode);
-        var step = 0.1;
+        var step = 0.02;
         switch (event.keyCode){
             // left
             case 37:case 65:
-                camera.pos[0]-=step;
-                camera.look[0]-=step;
+                camera.speed[0] = -step;
             break;
             // up
             case 38:case 87:
-                camera.pos[2]-=step;
-                camera.look[2]-=step;
+                camera.speed[2] = -step;
             break;
             // right
             case 39:case 68:
-                camera.pos[0]+=step;
-                camera.look[0]+=step;
+                camera.speed[0] = step;
             break;
             // down
             case 40:case 83:
-                camera.pos[2]+=step;
-                camera.look[2]+=step;
+                camera.speed[2] = step;
             break;
             default: return;
         }
-        camera.apply();
+    }
+    document.onkeyup = function(event){
+        camera.speed = [0,0,0];
     }
     // 绘制
     render();
@@ -550,6 +575,9 @@ function renderObject(object){
 
 function render() { 
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // 相机移动
+    camera.moveBySpeed();
+    camera.apply();
     // 跟踪球惯性移动
     traceball.rotateByInertia();
     // 应用场景变换矩阵

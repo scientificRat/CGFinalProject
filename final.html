@@ -7,15 +7,19 @@
             @media screen and (max-width: 760px) and (orientation:portrait) {canvas{width: 100% !important; margin:0 !important} #control-panel{width: 100%;margin: 0 !important} }
             @media screen and (max-height: 512px) and (orientation:landscape){canvas{width: 100vh !important;height: 100vh !important; margin:0 !important} #title{display: none} #control-panel{margin: 0 !important}}
             *{box-sizing: border-box;font-family: Helvetica, Arial, "Microsoft YaHei",sans-serif;color:#444}
-            button{user-select: none; cursor: pointer; outline: none;background: #888;color: #ffffff;border: none;border-radius: 2px;margin-right:10px;padding: 2px 10px;transition: background ease 0.2s}
+            hr{border:0.2px solid #444}
+            input{vertical-align: middle}
+            button{user-select: none; cursor: pointer; outline: none;background: #888;color: #ffffff;border: none;border-radius: 2px;margin-right:10px;padding: 3px 14px;transition: background ease 0.2s}
             button:hover{background: #999;transition: background ease 0.2s}
             button:active{background: #ccc;transition: background ease 0.1s}
             canvas{width:512px; background: #eee;border-radius: 2px;cursor:grab;cursor:-webkit-grab}
             canvas:active{cursor: grabbing;cursor:-webkit-grabbing}
             #copyright{display:inline-block;position:absolute;bottom:10px;right:10px;z-index:1;color:#aaa;font-size: 0.7em;user-select: none;-moz-user-select: none}
-            #control-panel{display:inline-block;background:#eee; vertical-align: top;min-width: 100px;border-radius: 2px;padding: 10px;margin: 0 10px;font-size: 14px;user-select: none;-moz-user-select: none}
+            #control-panel{display:inline-block;background:#eee; vertical-align: top;min-width: 170px;border-radius: 2px;padding: 10px;margin: 0 10px;font-size: 14px;user-select: none;-moz-user-select: none}
             .control-panel-title{margin: 0 0 10px 0;color: black}
             .column{margin: 10px 0;color: black}
+            .left-content{width: 20%; display: inline-block}
+            .right-content{width: 60%;display: inline-block}
         </style>
         <title>Final Project</title>
     </head>
@@ -34,6 +38,7 @@
 
         varying vec3 vN, vL, vE;
         varying vec2 vTexCoord;
+        varying float vD;
 
         void main(){
             mat4 transformMatrix = uModelViewMatrix * uModelMatrix * uObjectTransformMatrix;
@@ -42,9 +47,12 @@
             // 光照
             if(uLightPosition.z == 0.0){
                 vL = normalize(uLightPosition.xyz);
+                vD = length(uLightPosition.xyz);
             }  
             else{
-                vL = normalize((uModelViewMatrix*uLightPosition).xyz - pos.xyz);
+                vec3 temp = (uModelViewMatrix*uLightPosition).xyz - pos.xyz;
+                vD = length(temp);
+                vL = normalize(temp); 
             }
             vE = -normalize(pos.xyz);
             vN = normalize((transformMatrix * aNormal).xyz);
@@ -64,6 +72,7 @@
         
         varying vec3 vN, vL, vE;
         varying vec2 vTexCoord;
+        varying float vD;
 
         void main(){        
             vec3 H = normalize( vL + vE );
@@ -77,7 +86,7 @@
             
             if(dot(vL, vN) < 0.0 ) specular = vec4(0.0, 0.0, 0.0, 1.0);
         
-            vec4 fColor = ambient + diffuse +specular;
+            vec4 fColor = clamp(ambient + 50.0/(vD*(vD+0.02)) * (diffuse + specular), 0.0, 1.0);
             fColor.a = uAlpha;
             if(vTexCoord.x==0.0 && vTexCoord.y==0.0 ){
                 gl_FragColor =  fColor;
@@ -109,7 +118,15 @@
                 <div class="colomn">
                     <button onclick="greenBallCtr.decreaseAngularSpeed()">减小</button>
                     <button onclick="greenBallCtr.increaseAngularSpeed()">增大</button>
+                    <button onclick="greenBallCtr.inverseAngularSpeed()">反向</button>
                 </div>
+                <div class="column">
+                    <label class="control-panel-title">光源位置: </label><span id="light-info"></span>
+                </div>
+                
+                <div class="colomn"><label class="left-content">radius:</label><input id="light-r" class="right-content" type="range" value="8" step ="0.05" min="7" max="9"></div>
+                <div class="colomn"><label class="left-content">theta:</label><input id="light-theta"  class="right-content" type="range" step ="0.1" value="0" min="0" max="6.284"></div>
+                <div class="colomn"><label class="left-content">phi:</label><input id="light-phi"  class="right-content"type="range" step ="0.1" value="-0.3" min="-0.3" max="6.284"></div>
                 <div class="column">
                     <label class="control-panel-title">投影方式: </label><span id="projection-mode">透视</span>
                 </div>
