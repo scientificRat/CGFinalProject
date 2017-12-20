@@ -63,9 +63,9 @@ var scene = {
 // 全局光源
 var light = {
     pos: vec4(0.0, 0.0, 0.0, 1.0),       //齐次坐标 最后一个分量为1表示点光源
-    ambient: vec4(1.0, 1.0, 1.0, 1.0 ),  //环境光分量
-    diffuse: vec4( 1.0, 1.0, 1.0, 1.0 ), //漫反射光分量
-    specular: vec4( 1.0, 1.0, 1.0, 1.0 ), //镜面反射光分量
+    ambient: vec3(1.0, 1.0, 1.0 ),  //环境光分量
+    diffuse: vec3( 1.0, 1.0, 1.0 ), //漫反射光分量
+    specular: vec3( 1.0, 1.0, 1.0 ), //镜面反射光分量
     setPosByPolar: function(radius, theta, phi){
         // 计算光源位置
         this.pos = vec4(radius*Math.cos(phi)*Math.sin(theta),radius*Math.sin(phi), radius*Math.cos(phi)*Math.cos(theta), 1);
@@ -148,9 +148,9 @@ function RenderObject(transform, pointsArray, normalsArray,texCoordsArray, mater
 
 // data-struct Material
 function Material(
-    ambient=vec4( 0.5, 0.0, 0.0, 0.0 ),
-    diffuse=vec4( 0.5, 0.0, 0.0, 0.0 ),
-    specular=vec4( 0.5, 0.5, 0.5, 0.0 ),
+    ambient=vec3( 0.5, 0.0, 0.0),
+    diffuse=vec3( 0.5, 0.0, 0.0 ),
+    specular=vec3( 0.5, 0.5, 0.5 ),
     shininess=20.0) {
 
     this.ambient = ambient;
@@ -179,13 +179,13 @@ function createSphere(origin = [0,0,0], numTimesToSubdivide =4, material = new M
         sphere.pointsArray.push([b[0],b[1],b[2], 1]);
         sphere.pointsArray.push([c[0],c[1],c[2], 1]);
         if(hasTexture){
-            sphere.texCoordsArray.push([a[0],a[1]]);
-            sphere.texCoordsArray.push([b[0],b[1]]);
-            sphere.texCoordsArray.push([c[0],c[1]]);
+            sphere.texCoordsArray.push(a[0],a[1]);
+            sphere.texCoordsArray.push(b[0],b[1]);
+            sphere.texCoordsArray.push(c[0],c[1]);
         }else{
-            sphere.texCoordsArray.push([0,0]);
-            sphere.texCoordsArray.push([0,0]);
-            sphere.texCoordsArray.push([0,0]);
+            sphere.texCoordsArray.push(0,0);
+            sphere.texCoordsArray.push(0,0);
+            sphere.texCoordsArray.push(0,0);
         }  
     }
     
@@ -267,12 +267,12 @@ function createCube(origin = [0,0,0], material = new Material(), hasTexture = tr
             cube.texCoordsArray.push(texCoord[3]);
             cube.texCoordsArray.push(texCoord[2]);
         }else{
-            cube.texCoordsArray.push([0,0]);
-            cube.texCoordsArray.push([0,0]);
-            cube.texCoordsArray.push([0,0]);
-            cube.texCoordsArray.push([0,0]);
-            cube.texCoordsArray.push([0,0]);
-            cube.texCoordsArray.push([0,0]);
+            cube.texCoordsArray.push(0,0);
+            cube.texCoordsArray.push(0,0);
+            cube.texCoordsArray.push(0,0);
+            cube.texCoordsArray.push(0,0);
+            cube.texCoordsArray.push(0,0);
+            cube.texCoordsArray.push(0,0);
         }
     }
     
@@ -292,18 +292,18 @@ function createObjects(){
 
     var sphere2 = createSphere([2.7, 0, 0]);
     //sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
-    sphere2.material.ambient = vec4(0.0, 0.1, 0.2, 0);
-    sphere2.material.diffuse = vec4(0.0, 0.1, 0.2, 0);
+    sphere2.material.ambient = vec3(0.0, 0.1, 0.2);
+    sphere2.material.diffuse = vec3(0.0, 0.1, 0.2);
 
     var sphere3 = createSphere([0,2.7,0], 2);
     sphere3.selfRotating = new Rotation([0,1,0], 1); // 自转
-    sphere3.material.ambient = vec4(0.2, 0.2, 0, 0);
-    sphere3.material.diffuse = vec4(0.2, 0.2, 0, 0);
+    sphere3.material.ambient = vec3(0.2, 0.2, 0);
+    sphere3.material.diffuse = vec3(0.2, 0.2, 0);
 
     var cubeMaterial = new Material();
-    cubeMaterial.ambient = vec4(0.2,0.2,0.2, 0);
-    cubeMaterial.diffuse = vec4(0.5,0.5,0.5, 0);
-    cubeMaterial.specular = vec4(0.5,0.5,0.5, 0);
+    cubeMaterial.ambient = vec3(0.2,0.2,0.2);
+    cubeMaterial.diffuse = vec3(0.5,0.5,0.5);
+    cubeMaterial.specular = vec3(0.5,0.5,0.5);
     cubeMaterial.shininess = 60;
     var cube = createCube([0,0,0], cubeMaterial);
     cube.transform = mult(scalem(2.5,2.5,2.5),cube.transform);
@@ -322,7 +322,7 @@ var greenBallCtr = {
     divideDislay: document.getElementById("subdivided-count"),
     angularSpeedDislay: document.getElementById("angular-speed"),
     applySubdivide: function (){
-        var new_one = createSphere([0,2.7,0], this.currSubDivided);
+        var new_one = createSphere([0, 2.7, 0], this.currSubDivided);
         new_one.material = this.obj.material;
         new_one.selfRotating = this.obj.selfRotating;
         opaque_objects.splice(opaque_objects.indexOf(this.obj), 1);
@@ -562,9 +562,9 @@ function renderObject(object){
     var diffuseProduct = mult(light.diffuse, object.material.diffuse);
     var specularProduct = mult(light.specular, object.material.specular);
     // 传递光照相关uniform变量
-    gl.uniform4fv( uniformLoc.ambientProduct, flatten(ambientProduct));
-    gl.uniform4fv( uniformLoc.diffuseProduct, flatten(diffuseProduct) );
-    gl.uniform4fv( uniformLoc.specularProduct, flatten(specularProduct) );
+    gl.uniform3fv( uniformLoc.ambientProduct, flatten(ambientProduct));
+    gl.uniform3fv( uniformLoc.diffuseProduct, flatten(diffuseProduct) );
+    gl.uniform3fv( uniformLoc.specularProduct, flatten(specularProduct) );
     gl.uniform1f( uniformLoc.shininess, object.material.shininess );
     // 绘制
     gl.cullFace(gl.BACK); 

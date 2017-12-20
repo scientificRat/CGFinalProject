@@ -18,8 +18,8 @@
             #control-panel{display:inline-block;background:#eee; vertical-align: top;min-width: 170px;border-radius: 2px;padding: 10px;margin: 0 10px;font-size: 14px;user-select: none;-moz-user-select: none}
             .control-panel-title{margin: 0 0 10px 0;color: black}
             .column{margin: 10px 0;color: black}
-            .left-content{width: 20%; display: inline-block}
-            .right-content{width: 60%;display: inline-block}
+            .left-content{width: 25%; display: inline-block}
+            .right-content{width: 62%;display: inline-block}
         </style>
         <title>Final Project</title>
     </head>
@@ -65,7 +65,7 @@
     <script id="fragment-shader" type="x-shader/x-fragment">
         precision mediump float;
 
-        uniform vec4 uAmbientProduct, uDiffuseProduct, uSpecularProduct;
+        uniform vec3 uAmbientProduct, uDiffuseProduct, uSpecularProduct;
         uniform float uShininess;
         uniform float uAlpha;
         uniform sampler2D uTexture;
@@ -76,20 +76,20 @@
 
         void main(){        
             vec3 H = normalize( vL + vE );
-            vec4 ambient = uAmbientProduct;
+            vec3 ambient = uAmbientProduct;
         
             float Kd = max( dot(vL, vN), 0.0 );
-            vec4 diffuse = Kd * uDiffuseProduct;
+            vec3 diffuse = Kd * uDiffuseProduct;
         
             float Ks = pow( max(dot(vN, H), 0.0), uShininess );
-            vec4 specular = Ks * uSpecularProduct;
+            vec3 specular = Ks * uSpecularProduct;
             
-            if(dot(vL, vN) < 0.0 ) specular = vec4(0.0, 0.0, 0.0, 1.0);
+            if(dot(vL, vN) < 0.0 ) specular = vec3(0.0, 0.0, 0.0);
         
-            vec4 fColor = clamp(ambient + 50.0/(vD*(vD+0.02)) * (diffuse + specular), 0.0, 1.0);
+            vec4 fColor = vec4(clamp(ambient + 50.0/(vD*(vD+0.02)) * (diffuse + specular), 0.0, 1.0),1.0);
             fColor.a = uAlpha;
             if(vTexCoord.x==0.0 && vTexCoord.y==0.0 ){
-                gl_FragColor =  fColor;
+                gl_FragColor = fColor;
             }else{
                 gl_FragColor =  fColor*texture2D( uTexture, vTexCoord );
             }
