@@ -148,9 +148,9 @@ function RenderObject(transform, pointsArray, normalsArray,texCoordsArray, mater
 
 // data-struct Material
 function Material(
-    ambient=vec3( 0.5, 0.0, 0.0),
-    diffuse=vec3( 0.35, 0.0, 0.0 ),
-    specular=vec3( 0.4, 0.4, 0.4 ),
+    ambient=vec3(0.5, 0.02, 0.02),
+    diffuse=vec3(0.3, 0.02, 0.02),
+    specular=vec3(0.3, 0.3, 0.3),
     shininess=20.0) {
 
     this.ambient = ambient;
@@ -292,8 +292,8 @@ function createObjects(){
 
     var sphere2 = createSphere([2.7, 0, 0]);
     //sphere2.selfRotating = new Rotation([0,-1,0], 1); // 自转
-    sphere2.material.ambient = vec3(0.0, 0.1, 0.14);
-    sphere2.material.diffuse = vec3(0.0, 0.1, 0.14);
+    sphere2.material.ambient = vec3(0.0, 0.15, 0.2);
+    sphere2.material.diffuse = vec3(0.0, 0.15, 0.2);
 
     var sphere3 = createSphere([0,2.7,0], 2);
     sphere3.selfRotating = new Rotation([0,1,0], 1); // 自转
@@ -592,7 +592,7 @@ function render() {
         renderObject(object);
     }
     // 绘制透明对象
-    gl.uniform1f( uniformLoc.alpha, 0.7 );
+    gl.uniform1f( uniformLoc.alpha, 0.6 );
     gl.depthMask(false);
     for (const object of transparent_objects) {
         renderObject(object);
